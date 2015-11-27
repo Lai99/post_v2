@@ -16,7 +16,9 @@ def main():
 ##    while s in wb_s.sheets():
 ##    wb = copy(rb)
     a = Workbook_Template(path)
+
     print a._sheet_arrange
+    a.get_fill_pos('TX','5G','Standard')
 ##    wb.save(r"D:\python task\a.xls")
 
 if __name__ == '__main__':

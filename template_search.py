@@ -207,6 +207,7 @@ class _Abstract_Workbook_Template:
 
     def __init__(self, path):
         self._rb = xlrd.open_workbook(path,formatting_info=True)
+        self._rb.sheet_by_index(0)
         self._sheet_arrange = self._get_sheet_arrange(self._rb)
         self._wb = copy(self._rb)
 
@@ -248,10 +249,10 @@ class Workbook_Template(_Abstract_Workbook_Template):
         """
         if mode == "TX":
             # standard_x = 1,module_x = 2,rate_x = 3, case_x = 5, start_x = 6
-            return 1,2,3,5,6
+            return 0,1,2,4,5
         else:
             # standard_x = 1,module_x = 2,rate_x = 3, case_x = 6, start_x = 7
-            return 1,2,3,5,7
+            return 0,1,2,4,6
 
     def get_fill_pos(self, mode, band, anchor):
         """
@@ -259,26 +260,32 @@ class Workbook_Template(_Abstract_Workbook_Template):
         Input: int:specified sheet, string:anchor which used to split data block, int:band
         Output:dict:key:whole sheet value can be filled position, value:all anchors row loocation
         """
-        sheet = self._rb.sheet_by_index(self._sheet_arrange[mode+band])
-        standard_x ,module_x ,rate_x , case_x, start_x = _get_items_pos(mode)
+        table = self._rb.sheet_by_index(self._sheet_arrange[mode+band])
+        standard_x ,module_x ,rate_x , case_x, start_x = self._get_items_pos(mode)
+        print table.row_values(2)
 
         start = 0
         all_anchor_row = []
         #Don't need sheet front content. Use anchor to go to standard start position
         for row in range(1,50):
-            if Range(sheet,(row,standard_x)).value == anchor:
+            if table.row_values(row)[standard_x] == anchor:
                 start = row
                 all_anchor_row.append(row)
                 break
+
+        if len(all_anchor_row) == 0:
+            "Find no sheet anchor"
+            return 1
+
         last_standard = (0,0)
         last_module = (0,0)
         items = {}
         module_items = {}
         case_count = 0
-        #Don't no when to end. Need a value as bound ex:1500
-        for row in range(start+1,1500):
+
+        for row in range(table.nrows):
             #Use standard between standard to split data block, need to add last_standard one in the end
-            if Range(sheet,(row,module_x)).value != None:    #Collect Modulations in a standard
+            if table.row_values(row)[row,module_x] != None:    #Collect Modulations in a standard
                 if case_count != 0:
                     #Add "module and rate" with "value start position and case numbers"
                     k = make_module_item_key(sheet, last_module, rate_x)
