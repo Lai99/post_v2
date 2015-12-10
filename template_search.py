@@ -94,68 +94,6 @@ from xlutils.copy import copy
 ##                        "5G":manage_standard_5G
 ##                        }
 ##
-##def get_fill_pos(sheet,anchor,band,standard_x = 1,module_x = 2,rate_x = 3, case_x = 5, start_x = 6):
-##    """
-##    Get all value can be filled position in a sheet
-##    Input: int:specified sheet, string:anchor which used to split data block, int:band, int:spec column position, int: modulation column position,
-##           int:data rate column position, int:test items column position
-##    Output:dict:whole sheet value can be filled position, all anchors row loocation
-##    """
-##    start = 0
-##    all_anchor_row = []
-##    #Don't need sheet front content. Use anchor to go to standard start position
-##    for row in range(1,50):
-##        if Range(sheet,(row,standard_x)).value == anchor:
-##            start = row
-##            all_anchor_row.append(row)
-##            break
-##    last_standard = (0,0)
-##    last_module = (0,0)
-##    items = {}
-##    module_items = {}
-##    case_count = 0
-##    #Don't no when to end. Need a value as bound ex:1500
-##    for row in range(start+1,1500):
-##        #Use standard between standard to split data block, need to add last_standard one in the end
-##        if Range(sheet,(row,module_x)).value != None:    #Collect Modulations in a standard
-##            if case_count != 0:
-##                #Add "module and rate" with "value start position and case numbers"
-##                k = make_module_item_key(sheet, last_module, rate_x)
-##                module_items[k] = ((last_module[0], start_x),case_count)
-##                case_count = 0
-##            last_module = (row,module_x)
-##
-##        if Range(sheet,(row,standard_x)).value != None:
-##            if  Range(sheet,(row,standard_x)).value != anchor:
-##                if module_items:   #if true means it has a modulation collection
-####************************************************************************************************
-####  5G sheet has a sheet tail. When reach this, stop search and record "standard"
-##                    if Range(sheet,(row,standard_x)).value == "Info":
-##                        break
-####************************************************************************************************
-##                    items[standard_manage_func[band](sheet,last_standard)] = module_items
-####                    Range(sheet,(last_standard[0],12)).value = module_items.keys()
-####                    print module_items.values()
-##                    module_items = {}
-##                last_standard = (row,standard_x)  #A spec start position
-##            else:
-##                all_anchor_row.append(row)
-##                continue   #Not include row which has anchor
-##
-##        if Range(sheet,(row,case_x)).value != None:  #Count how many test case
-##            case_count += 1
-##
-##    #Don't forget last one have no end point
-##    if case_count != 0:
-##        #Add "module and rate" with "value start position and case numbers"
-##        k = make_module_item_key(sheet, last_module, rate_x)
-##        module_items[k] = ((last_module[0], start_x),case_count)
-##
-##    if module_items:
-##        items[standard_manage_func[band](sheet,last_standard)] = module_items
-####        Range(sheet,(last_standard[0],12)).value = module_items.keys()
-####        print module_items.values()
-##    return items, all_anchor_row
 ##
 ##def get_channel_start(sheet, pos, all_anchor_row = None):
 ##    """
@@ -223,7 +161,90 @@ class _Abstract_Workbook_Template:
     def get_fill_pos(self, mode, band, anchor):
         pass
 
-class Workbook_Template(_Abstract_Workbook_Template):
+class _Get_Sheet_Arrange:
+    self._standard_manage_func = {"2G":self._manage_standard_2G,
+                             "5G":self._manage_standard_5G
+                            }
+
+    def _make_module_item_key(self,table, pos, offset):
+        """
+        Add modulation and rate to a string
+        """
+        if table.row_values(pos[0])[offset]:
+            rate = str(table.row_values(pos[0])[offset])
+            # the rate from sheet will be float
+            if rate.split(".")[1] == '0':
+                rate = rate.split(".")[0]
+            else:
+                rate = rate.replace(".","_")
+            return _manage_modulation(table,pos) + "-" + rate
+        else:
+            return _manage_modulation(table,pos)
+
+    def _manage_modulation(self,table,pos):
+        """
+        Draw "modulation" express from template
+        """
+    ##************************************************
+    ## for match 2.4G 11b "DSSS-CCK". data will get "CCK" instead of "DSSS"
+        if "CCK" in table.cell(pos[0],pos[1]):
+            modulation = table.cell(pos[0],pos[1]).split("-")[1]
+    ##************************************************
+        else:
+            modulation = table.cell(pos[0],pos[1]).split("-")[0]
+        return modulation.strip()
+
+    def _manage_standard_5G(self,table,pos):
+        """
+        Draw "5G standard" express from template
+        """
+        s = table.cell(pos[0],pos[1]).value
+        if "\n" in s:
+            standard_rate, stream = s.split("\n")
+            standard_rate = standard_rate.replace(" ","")
+            standard, rate = standard_rate.split("-")
+    ##        print standard_rate
+            stream = stream.split(" ")[0]
+            rate = rate.split("T")[-1]
+    ##        print (standard,rate,stream)
+            return (standard,rate,stream)
+        else:
+    ##        print s
+    ##************************************************
+    ## for match data "11a" actually got "11ag
+            if s == "11a":
+                s = "11ag"
+    ##************************************************
+            return s
+
+    def _manage_standard_2G(self,table,pos):
+        """
+        Draw "2.4G standard" express from template
+        """
+        s = table.cell(pos[0],pos[1]).value
+        if "\n" in s:
+            standard_rate, stream = s.split("\n")
+            standard_rate = standard_rate.strip()
+            standard, rate = standard_rate.split(" ")
+            stream = stream.split(" ")[0]
+            rate = rate.split("M")[0]
+    ##        print (standard,rate,stream)
+    ##************************************************
+    ## from sheet will get "11gac" but data is "11ac"
+            if standard == "11gac":
+                standard = "11ac"
+    ##************************************************
+            return (standard,rate,stream)
+        else:
+    ##        print s
+    ##************************************************
+    ## for match data "11g" actually got "11ag
+            if s == "11g":
+                s = "11ag"
+    ##************************************************
+            return s
+
+class Workbook_Template(_Abstract_Workbook_Template, _Get_Sheet_Arrange):
     def _get_sheet_arrange(self,workbook):
         """
         To find sheet name "TX / RX" and "2.4G / 5G" and make a dict (name:sheet_pos)
@@ -285,24 +306,23 @@ class Workbook_Template(_Abstract_Workbook_Template):
 
         for row in range(table.nrows):
             #Use standard between standard to split data block, need to add last_standard one in the end
-            if table.row_values(row)[row,module_x] != None:    #Collect Modulations in a standard
+            if table.cell(row,module_x) != None:    #Collect Modulations in a standard
                 if case_count != 0:
                     #Add "module and rate" with "value start position and case numbers"
-                    k = make_module_item_key(sheet, last_module, rate_x)
+                    k = _make_module_item_key(table, last_module, rate_x)
                     module_items[k] = ((last_module[0], start_x),case_count)
                     case_count = 0
                 last_module = (row,module_x)
 
-            if Range(sheet,(row,standard_x)).value != None:
-                if  Range(sheet,(row,standard_x)).value != anchor:
+            if table.cell(row,standard_x) != None:
+                if  table.cell(row,standard_x) != anchor:
                     if module_items:   #if true means it has a modulation collection
     ##************************************************************************************************
     ##  5G sheet has a sheet tail. When reach this, stop search and record "standard"
-                        if Range(sheet,(row,standard_x)).value == "Info":
+                        if table.cell(row,standard_x) == "Info":
                             break
     ##************************************************************************************************
-                        items[standard_manage_func[band](sheet,last_standard)] = module_items
-    ##                    Range(sheet,(last_standard[0],12)).value = module_items.keys()
+                        items[_standard_manage_func[band](sheet,last_standard)] = module_items
     ##                    print module_items.values()
                         module_items = {}
                     last_standard = (row,standard_x)  #A spec start position
@@ -310,13 +330,13 @@ class Workbook_Template(_Abstract_Workbook_Template):
                     all_anchor_row.append(row)
                     continue   #Not include row which has anchor
 
-            if Range(sheet,(row,case_x)).value != None:  #Count how many test case
+            if table.row_values(row)[row,case_x] != None:  #Count how many test case
                 case_count += 1
 
         #Don't forget last one have no end point
         if case_count != 0:
             #Add "module and rate" with "value start position and case numbers"
-            k = make_module_item_key(sheet, last_module, rate_x)
+            k = _make_module_item_key(sheet, last_module, rate_x)
             module_items[k] = ((last_module[0], start_x),case_count)
 
         if module_items:
@@ -324,3 +344,4 @@ class Workbook_Template(_Abstract_Workbook_Template):
     ##        Range(sheet,(last_standard[0],12)).value = module_items.keys()
     ##        print module_items.values()
         return items, all_anchor_row
+
