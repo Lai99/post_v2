@@ -17,8 +17,11 @@ def main():
 ##    wb = copy(rb)
     a = Workbook_Template(path)
 
-    print a._sheet_arrange
-    a.get_fill_pos('TX','5G','Standard')
+    b = a.get_fill_pos('TX','5G','Standard')
+    for i in b[0]:
+        for j in b[0][i].values():
+            print i,j
+    print b[1]
 ##    wb.save(r"D:\python task\a.xls")
 
 if __name__ == '__main__':
