@@ -9,92 +9,6 @@
 import xlwt, xlrd, openpyxl
 from xlutils.copy import copy
 
-##def manage_standard_5G(sheet,pos):
-##    """
-##    Draw "5G standard" express from template
-##    """
-##    s = Range(sheet,pos).value
-##    if "\n" in s:
-##        standard_rate, stream = s.split("\n")
-##        standard_rate = standard_rate.replace(" ","")
-##        standard, rate = standard_rate.split("-")
-####        print standard_rate
-##        stream = stream.split(" ")[0]
-##        rate = rate.split("T")[-1]
-####        print (standard,rate,stream)
-##        return (standard,rate,stream)
-##    else:
-####        print s
-####************************************************
-#### for match data "11a" actually got "11ag
-##        if s == "11a":
-##            s = "11ag"
-####************************************************
-##        return s
-##
-##def manage_standard_2G(sheet,pos):
-##    """
-##    Draw "2.4G standard" express from template
-##    """
-##    s = Range(sheet,pos).value
-##    if "\n" in s:
-##        standard_rate, stream = s.split("\n")
-##        standard_rate = standard_rate.strip()
-##        standard, rate = standard_rate.split(" ")
-##        stream = stream.split(" ")[0]
-##        rate = rate.split("M")[0]
-####        print (standard,rate,stream)
-####************************************************
-#### from sheet will get "11gac" but data is "11ac"
-##        if standard == "11gac":
-##            standard = "11ac"
-####************************************************
-##        return (standard,rate,stream)
-##    else:
-####        print s
-####************************************************
-#### for match data "11g" actually got "11ag
-##        if s == "11g":
-##            s = "11ag"
-####************************************************
-##        return s
-##
-##def manage_modulation(sheet,pos):
-##    """
-##    Draw "modulation" express from template
-##    """
-####************************************************
-#### for match 2.4G 11b "DSSS-CCK". data will get "CCK" instead of "DSSS"
-##    if "CCK" in Range(sheet,pos).value:
-##        modulation = Range(sheet,pos).value.split("-")[1]
-####************************************************
-##    else:
-##        modulation = Range(sheet,pos).value.split("-")[0]
-##    return modulation.strip()
-##
-##def mange_rate(sheet,pos):
-##    pass
-##
-##def make_module_item_key(sheet, pos, offset):
-##    """
-##    Add modulation and rate to a string
-##    """
-##    if Range(sheet,(pos[0],offset)).value:
-##        rate = str(Range(sheet,(pos[0],offset)).value)
-##        # the rate from sheet will be float
-##        if rate.split(".")[1] == '0':
-##            rate = rate.split(".")[0]
-##        else:
-##            rate = rate.replace(".","_")
-##        return manage_modulation(sheet,pos) + "-" + rate
-##    else:
-##        return manage_modulation(sheet,pos)
-##
-##standard_manage_func = {"2G":manage_standard_2G,
-##                        "5G":manage_standard_5G
-##                        }
-##
-##
 ##def get_channel_start(sheet, pos, all_anchor_row = None):
 ##    """
 ##    Search row in all_anchor_row that closest to pos. The row have the channel information
@@ -273,7 +187,7 @@ class Workbook_Template(_Abstract_Workbook_Template, _Get_Sheet_Arrange):
             return 0,1,2,4,5
         else:
             # standard_x = 1,module_x = 2,rate_x = 3, case_x = 6, start_x = 7
-            return 0,1,2,4,6
+            return 0,1,2,5,6
 
     def get_fill_pos(self, mode, band, anchor):
         """
@@ -305,15 +219,19 @@ class Workbook_Template(_Abstract_Workbook_Template, _Get_Sheet_Arrange):
 
         for row in range(start+1,table.nrows):
             #Use standard between standard to split data block, need to add last_standard one in the end
-            if table.cell_value(row,module_x) != None:    #Collect Modulations in a standard
-                if case_count != 0:
+            # Warning! Might include none test item count because no clue to check it is item or not
+            if table.cell_value(row,module_x) != None and table.cell_value(row,module_x) != "":    #Collect Modulations in a standard
+                if case_count > 0:
+                    # For eliminate the warning point out thing
+                    if table.cell_value(row,standard_x) == anchor:
+                        case_count -= 1
                     #Add "module and rate" with "value start position and case numbers"
                     k = self._make_module_item_key(table, last_module, rate_x)
                     module_items[k] = ((last_module[0], start_x),case_count)
                     case_count = 0
                 last_module = (row,module_x)
 
-            if table.cell_value(row,standard_x) != None:
+            if table.cell_value(row,standard_x) != None and table.cell_value(row,standard_x) != "":
                 if  table.cell_value(row,standard_x) != anchor:
                     if module_items:   #if true means it has a modulation collection
     ##************************************************************************************************
@@ -327,9 +245,10 @@ class Workbook_Template(_Abstract_Workbook_Template, _Get_Sheet_Arrange):
                     last_standard = (row,standard_x)  #A spec start position
                 else:
                     all_anchor_row.append(row)
+
                     continue   #Not include row which has anchor
 
-            if table.cell_value(row,case_x) != None:  #Count how many test case
+            if table.cell_value(row,case_x) != None and table.cell_value(row,case_x) != "":  #Count how many test case
                 case_count += 1
 
         #Don't forget last one have no end point
