@@ -1,23 +1,21 @@
 #-------------------------------------------------------------------------------
-# Name:        workook_template_xls
-# Purpose:     load .csv data and post to *.xls. Use xlrd to read and xlwt to
-#              write
+# Name:        workook_template_xlsx
+# Purpose:     load .csv data and post to *.xlsx. Use openpyxl to read and write
+#
 # Author:      Lai
 #
 # Created:     12/15/2015
 #-------------------------------------------------------------------------------
-import xlwt, xlrd
-from xlutils.copy import copy
+from openpyxl import load_workbook
 import data_manage
 
 class _Abstract_Workbook_Template:
     def __init__(self, path):
         # save template sheet setup to avoid setup re-construct. This is for speed up
         self._sheet_setup= {}
-        self._rb = xlrd.open_workbook(path,formatting_info=True)
+        self._wb = load_workbook(path, data_only=True)
         # save explicit (name:sheet_pos) reflection to which will be use in post
-        self._sheet_arrange = self._get_sheet_arrange(self._rb)
-        self._wb = copy(self._rb)
+        self._sheet_arrange = self._get_sheet_arrange(self._wb)
 
     def save(self,path):
         pass
@@ -28,7 +26,7 @@ class _Abstract_Workbook_Template:
     def _get_sheet_arrange(self,workbook):
         pass
 
-    def _get_items_pos(self,table,anchor,items):
+    def _get_items_pos(self,sheet,anchor,items):
         pass
 
     def _get_fill_pos(self, mode, band, anchor):
@@ -40,39 +38,44 @@ class _Get_Sheet_Arrange:
                                       "5G":self._manage_standard_5G
                                      }
 
-    def _make_module_item_key(self,table, pos, offset):
+    def _make_module_item_key(self,sheet, pos, offset):
         """
         Add modulation and rate to a string
         """
-        if table.cell_value(pos[0],offset):
-            rate = str(table.cell_value(pos[0],offset))
-            # the rate from sheet will be float
-            if rate.split(".")[1] == '0':
-                rate = rate.split(".")[0]
-            else:
-                rate = rate.replace(".","_")
-            return self._manage_modulation(table,pos) + "-" + rate
-        else:
-            return self._manage_modulation(table,pos)
+        if sheet.cell(row=pos[0],column=offset).value:
+            rate = str(sheet.cell(row=pos[0],column=offset).value)
 
-    def _manage_modulation(self,table,pos):
+            if "." in rate:
+                rate = rate.replace(".","_")
+
+##            #if the rate from sheet is float
+##            if rate.split(".")[1] == '0':
+##                rate = rate.split(".")[0]
+##            else:
+##                rate = rate.replace(".","_")
+
+            return self._manage_modulation(sheet,pos) + "-" + rate
+        else:
+            return self._manage_modulation(sheet,pos)
+
+    def _manage_modulation(self,sheet,pos):
         """
         Draw "modulation" express from template
         """
     ##************************************************
     ## for match 2.4G 11b "DSSS-CCK". data will get "CCK" instead of "DSSS"
-        if "CCK" in table.cell_value(pos[0],pos[1]):
-            modulation = table.cell_value(pos[0],pos[1]).split("-")[1]
+        if "CCK" in sheet.cell(row=pos[0],column=pos[1]).value:
+            modulation = sheet.cell(row=pos[0],column=pos[1]).value.split("-")[1]
     ##************************************************
         else:
-            modulation = table.cell_value(pos[0],pos[1]).split("-")[0]
+            modulation = sheet.cell(row=pos[0],column=pos[1]).value.split("-")[0]
         return modulation.strip()
 
-    def _manage_standard_5G(self,table,pos):
+    def _manage_standard_5G(self,sheet,pos):
         """
         Draw "5G standard" express from template
         """
-        s = str(table.cell_value(pos[0],pos[1]))
+        s = str(sheet.cell(row=pos[0],column=pos[1]).value)
         if "\n" in s:
             standard_rate, stream = s.split("\n")
             standard_rate = standard_rate.replace(" ","")
@@ -91,11 +94,11 @@ class _Get_Sheet_Arrange:
     ##************************************************
             return s
 
-    def _manage_standard_2G(self,table,pos):
+    def _manage_standard_2G(self,sheet,pos):
         """
         Draw "2.4G standard" express from template
         """
-        s = str(table.cell_value(pos[0],pos[1]))
+        s = str(sheet.cell(row=pos[0],column=pos[1]).value)
         if "\n" in s:
             standard_rate, stream = s.split("\n")
             standard_rate = standard_rate.strip()
@@ -150,29 +153,6 @@ class _Post_Func:
                         # RX
                         "SENS":self._post_sens
                         }
-
-    def _getOutCell(self,outSheet, rowIndex, colIndex):
-        """ HACK: Extract the internal xlwt cell representation. """
-        row = outSheet._Worksheet__rows.get(rowIndex)
-        if not row: return None
-
-        cell = row._Row__cells.get(colIndex)
-        return cell
-
-    def _setOutCell(self,outSheet, row, col, value):
-        """ Change cell value without changing formatting. """
-        # HACK to retain cell style.
-        previousCell = self._getOutCell(outSheet, row, col)
-        # END HACK, PART I
-
-        outSheet.write(row, col, value)
-
-        # HACK, PART II
-        if previousCell:
-            newCell = self._getOutCell(outSheet, row, col)
-            if newCell:
-                newCell.xf_idx = previousCell.xf_idx
-        # END HACK
 
     def _post_power(self,data):
         if "power" in data:
@@ -238,13 +218,13 @@ class _Post_Func:
     def _get_data_conf(self,data):
         return (data["standard"],data["rate"],data["BW"],data["stream"])
 
-    def _post_value(self,ws,table,data,start,ch_pos,case_num):
+    def _post_value(self,ws,data,start,ch_pos,case_num):
         """
         Post value in sheet explicit position
         """
         for i in range(case_num):
             # Get item name
-            case = table.cell_value(start[0]+i,start[1]-1)
+            case = ws.cell(row=start[0]+i,column=start[1]-1).value
     ##        print case
             # if valid item name
             if case in self.sheet_item_ref:
@@ -259,13 +239,13 @@ class _Post_Func:
                         for idx in range(int(data["stream"])):
     ##                    for idx in range(len(antennas)):
                             post_pos = (start[0]+i,ch_pos[1]+int(antennas[idx]))
-                            self._setOutCell(ws,post_pos[0],post_pos[1],value[idx])
+                            ws.cell(row=post_pos[0],column=post_pos[1]).value = str(value[idx])
                     else:
                         # antennas = 1 and value = 1 will be 1 stream
                         if len(antennas) > 1:
     ###################### for RX 11ac MIMO and SIMO post #######################
                             if self.sheet_item_ref[case] in self.rx_item:
-                                move = self._find_ch_sum(table,ch_pos)
+                                move = self._find_ch_sum(ws,ch_pos)
     ##                            print move
                                 post_pos = (start[0]+i,ch_pos[1]+move)
     #############################################################################
@@ -274,7 +254,7 @@ class _Post_Func:
                                 post_pos = (start[0]+i,ch_pos[1])
                         else:
                             post_pos = (start[0]+i,ch_pos[1]+int(antennas[0]))
-                        self._setOutCell(ws,post_pos[0],post_pos[1],value[0])
+                        ws.cell(row=post_pos[0],column=post_pos[1]).value = str(value[0])
 
     def _meet_standard(self,data,fill_pos):
         """
@@ -332,23 +312,30 @@ class _Post_Func:
         print "Can't find this modulation " + data[self.item_ref["rate"]] + "," + data[self.item_ref["standard"]]
         return None
 
-class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Post_Func):
+class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Post_Func):
     def __init__(self,path):
         _Abstract_Workbook_Template.__init__(self,path)
         _Get_Sheet_Arrange.__init__(self)
         _Post_Func.__init__(self)
 
     def save(self,path):
-        self._wb.save(path + ".xls")
+        self._wb.save(path + ".xlsx")
 
     def post(self,data_path, mode, band, standard_anchor, channel_anchor):
         """
         Get template setup to find post position then post value
         """
-        table = self._rb.sheet_by_index(self._sheet_arrange[mode+band])
+        ws = self._wb.worksheets[self._sheet_arrange[mode+band]]
+        self._max_col = ws.max_column
+        self._max_row = ws.max_row
 
         if not (mode+band) in self._sheet_setup:
-            self._sheet_setup[mode+band] = self._get_fill_pos(table, mode,band,standard_anchor)
+            self._sheet_setup[mode+band] = self._get_fill_pos(ws, mode,band,standard_anchor)
+
+##        for i in self._sheet_setup[mode+band][0]:
+##            for j in self._sheet_setup[mode+band][0][i]:
+##                print i,j,self._sheet_setup[mode+band][0][i][j]
+
         fill_pos, all_anchor_row = self._sheet_setup[mode+band][0], self._sheet_setup[mode+band][1]
 
         last_data_conf = None
@@ -383,14 +370,13 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
             # Get value post position
     ##            print data[item_ref["channel"]]
             if int(data[self.item_ref["channel"]]) > last_ch:
-                ch_pos = self._get_channel_pos(table,ch_now,data[self.item_ref["channel"]])
+                ch_pos = self._get_channel_pos(ws,ch_now,data[self.item_ref["channel"]])
             else:
-                ch_pos = self._get_channel_pos(table,ch_start,data[self.item_ref["channel"]])
+                ch_pos = self._get_channel_pos(ws,ch_start,data[self.item_ref["channel"]])
             last_ch = int(data[self.item_ref["channel"]])
-    ##        print ch_pos, "ch pos"
+##            print ch_pos, "ch pos"
             if ch_pos:
-                ws = self._wb.get_sheet(self._sheet_arrange[mode+band])
-                self._post_value(ws,table,data,need_pos,ch_pos,case_num)
+                self._post_value(ws,data,need_pos,ch_pos,case_num)
                 # if value appear in ch by ch will lose
                 ch_now = ch_pos
             else:
@@ -400,7 +386,7 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         """
         To find sheet name "TX / RX" and "2.4G / 5G" and make a dict (name:sheet_pos)
         """
-        sheet_names = [i.lower() for i in workbook.sheet_names()]
+        sheet_names = [i.lower() for i in workbook.get_sheet_names()]
         sheet_ref = {}
         for idx in range(len(sheet_names)):
             if "2.4ghz" in sheet_names[idx]:
@@ -421,12 +407,12 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         """
         if mode == "TX":
             # standard_x = 1,module_x = 2,rate_x = 3, case_x = 5, start_x = 6
-            return 0,1,2,4,5
+            return 1,2,3,5,6
         else:
             # standard_x = 1,module_x = 2,rate_x = 3, case_x = 6, start_x = 7
-            return 0,1,2,5,6
+            return 1,2,3,6,7
 
-    def _get_fill_pos(self, table, mode, band, anchor):
+    def _get_fill_pos(self, sheet, mode, band, anchor):
         """
         Get all value can be filled position in a sheet
         Input: int:specified sheet, string:anchor which used to split data block, int:band
@@ -438,7 +424,7 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         all_anchor_row = []
         #Don't need sheet front content. Use anchor to go to standard start position
         for row in range(1,50):
-            if table.cell_value(row,standard_x) == anchor:
+            if sheet.cell(row=row,column=standard_x).value == anchor:
                 start = row
                 all_anchor_row.append(row)
                 break
@@ -446,6 +432,7 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         if len(all_anchor_row) == 0:
             "Find no sheet anchor"
             return 1
+##        print all_anchor_row
 
         last_standard = (0,0)
         last_module = (0,0)
@@ -453,29 +440,29 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         module_items = {}
         case_count = 0
 
-        for row in range(start+1,table.nrows):
+        for row in range(start + 1,self._max_row + 1):
             #Use standard between standard to split data block, need to add last_standard one in the end
             # Warning! Might include none test item count because no clue to check it is item or not
-            if table.cell_value(row,module_x) != None and table.cell_value(row,module_x) != "":    #Collect Modulations in a standard
+            if sheet.cell(row=row,column=module_x).value != None and sheet.cell(row=row,column=module_x).value != "":    #Collect Modulations in a standard
                 if case_count > 0:
                     # For eliminate the warning point out thing
-                    if table.cell_value(row,standard_x) == anchor:
+                    if sheet.cell(row=row,column=standard_x).value == anchor:
                         case_count -= 1
                     #Add "module and rate" with "value start position and case numbers"
-                    k = self._make_module_item_key(table, last_module, rate_x)
+                    k = self._make_module_item_key(sheet, last_module, rate_x)
                     module_items[k] = ((last_module[0], start_x),case_count)
                     case_count = 0
                 last_module = (row,module_x)
 
-            if table.cell_value(row,standard_x) != None and table.cell_value(row,standard_x) != "":
-                if  table.cell_value(row,standard_x) != anchor:
+            if sheet.cell(row=row,column=standard_x).value != None and sheet.cell(row=row,column=standard_x).value != "":
+                if  sheet.cell(row=row,column=standard_x).value != anchor:
                     if module_items:   #if true means it has a modulation collection
     ##************************************************************************************************
     ##  5G sheet has a sheet tail. When reach this, stop search and record "standard"
-                        if table.cell_value(row,standard_x) == "Info":
+                        if sheet.cell(row=row,column=standard_x).value == "Info":
                             break
     ##************************************************************************************************
-                        items[self._standard_manage_func[band](table,last_standard)] = module_items
+                        items[self._standard_manage_func[band](sheet,last_standard)] = module_items
     ##                    print module_items.values()
                         module_items = {}
                     last_standard = (row,standard_x)  #A spec start position
@@ -484,17 +471,17 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
 
                     continue   #Not include row which has anchor
 
-            if table.cell_value(row,case_x) != None and table.cell_value(row,case_x) != "":  #Count how many test case
+            if sheet.cell(row=row,column=case_x).value != None and sheet.cell(row=row,column=case_x).value != "":  #Count how many test case
                 case_count += 1
 
         #Don't forget last one have no end point
         if case_count != 0:
             #Add "module and rate" with "value start position and case numbers"
-            k = self._make_module_item_key(table, last_module, rate_x)
+            k = self._make_module_item_key(sheet, last_module, rate_x)
             module_items[k] = ((last_module[0], start_x),case_count)
 
         if module_items:
-            items[self._standard_manage_func[band](table,last_standard)] = module_items
+            items[self._standard_manage_func[band](sheet,last_standard)] = module_items
         return items, all_anchor_row
 
     def _get_channel_start(self, pos, all_anchor_row = None):
@@ -514,7 +501,7 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         print "Can't find channel form location in sheet"
         return None
 
-    def _get_channel_pos(self, table, pos, ch):
+    def _get_channel_pos(self, sheet, pos, ch):
         """
         Search column to find the channel title position
         """
@@ -523,9 +510,9 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         count = 31
         # beacause it might have blank, need to pass
         while count > 0:
-            if col < table.ncols:
-                while table.cell_value(row,col):
-                    if ch in table.cell_value(row,col):
+            if col < self._max_col:
+                while sheet.cell(row=row,column=col).value:
+                    if ch in sheet.cell(row=row,column=col).value:
                         return (row, col)
                     col += 1
                     count = 31
@@ -536,14 +523,14 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         print "Can't find this channel in channel form " + str(ch) + " , "+ str(pos)
         return None
 
-    def _find_ch_sum(self, table, ch_pos):
+    def _find_ch_sum(self, sheet, ch_pos):
         """
         Search column to find the last block value meet value in ch_pos
         """
         count = 0
-        match = table.cell_value(ch_pos[0], ch_pos[1]).replace(" ","")
+        match = sheet.cell(row=ch_pos[0], column=ch_pos[1]).value.replace(" ","")
 
-        while ch_pos[1]+count < table.ncols and table.cell_value(ch_pos[0],ch_pos[1]+count).replace(" ","") == match:
+        while ch_pos[1]+count < self._max_col and sheet.cell(row=ch_pos[0],column=ch_pos[1]+count).value.replace(" ","") == match:
 ##            print ch_pos[0] , ch_pos[1] + count
             count += 1
         return count - 1

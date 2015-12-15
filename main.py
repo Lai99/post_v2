@@ -5,15 +5,13 @@
 #
 # Author:      Lai
 #
-# Created:     14/12/2015
+# Created:     12/15/2015
 #-------------------------------------------------------------------------------
 import os, sys
 import time
 import datetime
 from workbook_template_xls import Workbook_Template_Xls
-
-# save template sheet setup to avoid setup re-construct. This is for speed up
-sheet_setup = {}
+from workbook_template_xlsx import Workbook_Template_Xlsx
 
 def get_folder_filenames(path):
     """
@@ -50,8 +48,6 @@ def post(wb, data_path, data_name):
 
     wb.post(data_path, tx_or_rx, band, standard_anchor, channel_anchor)
 
-##    sheet_post.post(data_path,sheet,sheet_setup[tx_or_rx + band], channel_anchor)
-
 def save_report(wb,report_path,date,name):
     """
     Save workbook at report_path. If folder not exist, it will make
@@ -66,7 +62,14 @@ def open_workbook(path):
     """
     Open file
     """
-    return Workbook_Template_Xls(path)
+    name = path.split(".")[-1].lower()
+    if name == "xls":
+        return Workbook_Template_Xls(path)
+    elif name == "xlsx":
+        return Workbook_Template_Xlsx(path)
+    else:
+        print "Not support this file type. Only *.xls and *xlsx"
+        return None
 
 def find_band(data_name):
     """
@@ -105,13 +108,16 @@ def main():
     date = datetime.datetime.fromtimestamp(t).strftime(r"%Y%m%d")
 
     # Need get template path
-##    if len(sys.argv) == 1:
-##        sys.exit(0)
+    if len(sys.argv) == 1:
+        sys.exit(0)
 
-##    template_path = sys.argv[1]
-    template_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-    template_path = os.path.join(template_path,"tmp.xls")
+    template_path = sys.argv[1]
+##    template_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+##    template_path = os.path.join(template_path,"tmp.xlsx")
+
     wb = open_workbook(template_path)
+    if not wb:
+        return 1
 
     print "Start !"
     t1 = time.time()
@@ -122,12 +128,10 @@ def main():
             print data_path
             post(wb, data_path,data_name)
         save_report(wb,report_path,date,folder)
-    ##        Application(wb).screen_updating = True
 
     print "Finish !"
     print time.time() - t1
-    # Not through quit by python itself will let excel file alive in process
-##    os.system("pause")
+    os.system("pause")
 
 if __name__ == '__main__':
     main()
