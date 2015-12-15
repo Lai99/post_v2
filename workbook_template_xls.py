@@ -196,6 +196,29 @@ class _Post_Func:
                         "SENS":self._post_sens
                         }
 
+    def _getOutCell(self,outSheet, rowIndex, colIndex):
+        """ HACK: Extract the internal xlwt cell representation. """
+        row = outSheet._Worksheet__rows.get(rowIndex)
+        if not row: return None
+
+        cell = row._Row__cells.get(colIndex)
+        return cell
+
+    def _setOutCell(self,outSheet, row, col, value):
+        """ Change cell value without changing formatting. """
+        # HACK to retain cell style.
+        previousCell = self._getOutCell(outSheet, row, col)
+        # END HACK, PART I
+
+        outSheet.write(row, col, value)
+
+        # HACK, PART II
+        if previousCell:
+            newCell = self._getOutCell(outSheet, row, col)
+            if newCell:
+                newCell.xf_idx = previousCell.xf_idx
+        # END HACK
+
     def _post_power(self,data):
         if "power" in data:
             if data["power"]:
@@ -281,7 +304,7 @@ class _Post_Func:
                         for idx in range(int(data["stream"])):
     ##                    for idx in range(len(antennas)):
                             post_pos = (start[0]+i,ch_pos[1]+int(antennas[idx]))
-                            ws.write(post_pos[0],post_pos[1],value[idx])
+                            self._setOutCell(ws,post_pos[0],post_pos[1],value[idx])
                     else:
                         # antennas = 1 and value = 1 will be 1 stream
                         if len(antennas) > 1:
@@ -296,7 +319,7 @@ class _Post_Func:
                                 post_pos = (start[0]+i,ch_pos[1])
                         else:
                             post_pos = (start[0]+i,ch_pos[1]+int(antennas[0]))
-                        ws.write(post_pos[0],post_pos[1],value[0])
+                        self._setOutCell(ws,post_pos[0],post_pos[1],value[0])
 
     def _meet_standard(self,data,fill_pos):
         """
@@ -354,14 +377,14 @@ class _Post_Func:
         print "Can't find this modulation " + data[self.item_ref["rate"]] + "," + data[self.item_ref["standard"]]
         return None
 
-class Workbook_Template(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Post_Func):
+class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Post_Func):
     def __init__(self,path):
         _Abstract_Workbook_Template.__init__(self,path)
         _Get_Sheet_Arrange.__init__(self)
         _Post_Func.__init__(self)
 
     def save(self,path):
-        self._wb.save(path+".xls")
+        self._wb.save(path + ".xls")
 
     def post(self,data_path, mode, band, standard_anchor, channel_anchor):
         """
@@ -372,11 +395,6 @@ class Workbook_Template(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Post_F
         if not (mode+band) in self._sheet_setup:
             self._sheet_setup[mode+band] = self._get_fill_pos(table, mode,band,standard_anchor)
         fill_pos, all_anchor_row = self._sheet_setup[mode+band][0], self._sheet_setup[mode+band][1]
-
-##        for i in fill_pos:
-##            for j in fill_pos[i]:
-##                print i, j
-##        print all_anchor_row
 
         last_data_conf = None
         need_pos = None
@@ -524,7 +542,7 @@ class Workbook_Template(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Post_F
             items[self._standard_manage_func[band](table,last_standard)] = module_items
         return items, all_anchor_row
 
-    def _get_channel_start(self,pos, all_anchor_row = None):
+    def _get_channel_start(self, pos, all_anchor_row = None):
         """
         Search row in all_anchor_row that closest to pos. The row have the channel information
         """
@@ -546,25 +564,31 @@ class Workbook_Template(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Post_F
         Search column to find the channel title position
         """
         row, col = pos[0], pos[1]
+
         count = 31
         # beacause it might have blank, need to pass
         while count > 0:
-            while table.cell_value(row,col):
-                if ch in table.cell_value(row,col):
-                    return (row, col)
+            if col < table.ncols:
+                while table.cell_value(row,col):
+                    if ch in table.cell_value(row,col):
+                        return (row, col)
+                    col += 1
+                    count = 31
                 col += 1
-                count = 31
-            col += 1
-            count -= 1
+                count -= 1
+            else:
+                break
         print "Can't find this channel in channel form " + str(ch) + " , "+ str(pos)
         return None
 
-    def _find_ch_sum(self, table,ch_pos):
+    def _find_ch_sum(self, table, ch_pos):
         """
         Search column to find the last block value meet value in ch_pos
         """
         count = 0
         match = table.cell_value(ch_pos[0], ch_pos[1]).replace(" ","")
-        while table.cell_value(ch_pos[0],ch_pos[1]+count) and table.cell_value(ch_pos[0],ch_pos[1]+count).replace(" ","") == match:
+
+        while ch_pos[1]+count < table.ncols and table.cell_value(ch_pos[0],ch_pos[1]+count).replace(" ","") == match:
+##            print ch_pos[0] , ch_pos[1] + count
             count += 1
         return count - 1

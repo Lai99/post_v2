@@ -10,7 +10,7 @@
 import os, sys
 import time
 import datetime
-from workbook_template import Workbook_Template
+from workbook_template_xls import Workbook_Template_Xls
 
 # save template sheet setup to avoid setup re-construct. This is for speed up
 sheet_setup = {}
@@ -59,14 +59,14 @@ def save_report(wb,report_path,date,name):
     path = os.path.join(report_path,date)
     if not os.path.exists(path):
         os.makedirs(path)
-    print os.path.join(path,name)
+    print "Save Result " + os.path.join(path,name)
     wb.save(os.path.join(path,name))
 
 def open_workbook(path):
     """
     Open file
     """
-    return Workbook_Template(path)
+    return Workbook_Template_Xls(path)
 
 def find_band(data_name):
     """
