@@ -8,7 +8,7 @@
 #-------------------------------------------------------------------------------
 import xlwt, xlrd
 from xlutils.copy import copy
-import data_manage
+from data_manage import Data
 
 class _Abstract_Workbook_Template:
     def __init__(self, path):
@@ -359,7 +359,9 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         ch_now = None
         last_ch = 0
 
-        for data in data_manage.load_data(data_path):
+        input_data = Data(data_path)
+
+        for data in input_data.load_data():
             if not self._check_same_row(data, last_data_conf):
     ##            print data
     ##            print fill_pos.keys()

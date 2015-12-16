@@ -7,7 +7,7 @@
 # Created:     12/15/2015
 #-------------------------------------------------------------------------------
 from openpyxl import load_workbook
-import data_manage
+from data_manage import Data
 
 class _Abstract_Workbook_Template:
     def __init__(self, path):
@@ -239,7 +239,8 @@ class _Post_Func:
                         for idx in range(int(data["stream"])):
     ##                    for idx in range(len(antennas)):
                             post_pos = (start[0]+i,ch_pos[1]+int(antennas[idx]))
-                            ws.cell(row=post_pos[0],column=post_pos[1]).value = str(value[idx])
+##                            print type(value[idx]), value[idx]
+                            ws.cell(row=post_pos[0],column=post_pos[1]).value = value[idx]
                     else:
                         # antennas = 1 and value = 1 will be 1 stream
                         if len(antennas) > 1:
@@ -254,7 +255,8 @@ class _Post_Func:
                                 post_pos = (start[0]+i,ch_pos[1])
                         else:
                             post_pos = (start[0]+i,ch_pos[1]+int(antennas[0]))
-                        ws.cell(row=post_pos[0],column=post_pos[1]).value = str(value[0])
+##                        print type(value[0]), value[0]
+                        ws.cell(row=post_pos[0],column=post_pos[1]).value = value[0]
 
     def _meet_standard(self,data,fill_pos):
         """
@@ -346,7 +348,9 @@ class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _P
         ch_now = None
         last_ch = 0
 
-        for data in data_manage.load_data(data_path):
+        input_data = Data(data_path)
+
+        for data in input_data.load_data():
             if not self._check_same_row(data, last_data_conf):
     ##            print data
     ##            print fill_pos.keys()
@@ -510,7 +514,7 @@ class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _P
         count = 31
         # beacause it might have blank, need to pass
         while count > 0:
-            if col < self._max_col:
+            if col <= self._max_col:
                 while sheet.cell(row=row,column=col).value:
                     if ch in sheet.cell(row=row,column=col).value:
                         return (row, col)
@@ -530,7 +534,7 @@ class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _P
         count = 0
         match = sheet.cell(row=ch_pos[0], column=ch_pos[1]).value.replace(" ","")
 
-        while ch_pos[1]+count < self._max_col and sheet.cell(row=ch_pos[0],column=ch_pos[1]+count).value.replace(" ","") == match:
+        while ch_pos[1]+count <= self._max_col and sheet.cell(row=ch_pos[0],column=ch_pos[1]+count).value.replace(" ","") == match:
 ##            print ch_pos[0] , ch_pos[1] + count
             count += 1
         return count - 1
