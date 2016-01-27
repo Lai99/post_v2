@@ -108,12 +108,12 @@ def main():
     date = datetime.datetime.fromtimestamp(t).strftime(r"%Y%m%d")
 
     # Need get template path
-    if len(sys.argv) == 1:
-        sys.exit(0)
+##    if len(sys.argv) == 1:
+##        sys.exit(0)
 
-    template_path = sys.argv[1]
-##    template_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-##    template_path = os.path.join(template_path,"tmp.xlsx")
+##    template_path = sys.argv[1]
+    template_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+    template_path = os.path.join(template_path,"tmp.xlsx")
 
     wb = open_workbook(template_path)
     if not wb:
@@ -131,7 +131,7 @@ def main():
 
     print "Finish !"
     print time.time() - t1
-    os.system("pause")
+##    os.system("pause")
 
 if __name__ == '__main__':
     main()

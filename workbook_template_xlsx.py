@@ -511,19 +511,11 @@ class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _P
         """
         row, col = pos[0], pos[1]
 
-        count = 31
-        # beacause it might have blank, need to pass
-        while count > 0:
-            if col <= self._max_col:
-                while sheet.cell(row=row,column=col).value:
-                    if ch in sheet.cell(row=row,column=col).value:
-                        return (row, col)
-                    col += 1
-                    count = 31
-                col += 1
-                count -= 1
-            else:
-                break
+        while col <= self._max_col:
+            if sheet.cell(row=row,column=col).value and ch in sheet.cell(row=row,column=col).value:
+                return (row, col)
+            col += 1
+
         print "Can't find this channel in channel form " + str(ch) + " , "+ str(pos)
         return None
 

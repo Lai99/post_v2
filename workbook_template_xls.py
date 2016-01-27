@@ -522,19 +522,11 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         """
         row, col = pos[0], pos[1]
 
-        count = 31
-        # beacause it might have blank, need to pass
-        while count > 0:
-            if col < table.ncols:
-                while table.cell_value(row,col):
-                    if ch in table.cell_value(row,col):
-                        return (row, col)
-                    col += 1
-                    count = 31
-                col += 1
-                count -= 1
-            else:
-                break
+        while col < table.ncols:
+            if ch in table.cell_value(row,col):
+                return (row, col)
+            col += 1
+
         print "Can't find this channel in channel form " + str(ch) + " , "+ str(pos)
         return None
 
