@@ -19,8 +19,10 @@ class Data:
                     "stream":self._get_stream,
                     "antenna":self._get_antenna,
                     "power":self._get_power,
+                    "Target_Power":self._get_target_power,
                     "sens":self._get_sens
                    }
+        self._item_seq = ["standard","channel","rate","BW","stream","antenna","power","Target_Power","sens"]
 
     def load_data(self):
         """
@@ -35,25 +37,30 @@ class Data:
                 if line:
     ##                print line
                     if len(line) > 2:  #line with config
-                        if self._get_func["standard"](line):
-                            data["standard"] = self._get_func["standard"](line)
-                        if self._get_func["channel"](line):
-                            data["channel"] = self._get_func["channel"](line)
-                        if self._get_func["rate"](line):
-                            data["rate"] = self._get_func["rate"](line)
-                        if self._get_func["BW"](line):
-                            data["BW"] = self._get_func["BW"](line)
-                        if self._get_func["stream"](line):
-                            data["stream"] = self._get_func["stream"](line)
-                        if self._get_func["antenna"](line):
-                            data["antenna"] = self._get_func["antenna"](line)
-                        # TX power
-                        if self._get_func["power"](line):
-                            data["power"] = self._get_func["power"](line)
-
-                        # RX SENS
-                        if self._get_func["sens"](line):
-                            data["sens"] = self._get_func["sens"](line)
+                        for item in self._item_seq:
+                            if self._get_func[item](line):
+                                data[item] = self._get_func[item](line)
+##                        if self._get_func["standard"](line):
+##                            data["standard"] = self._get_func["standard"](line)
+##                        if self._get_func["channel"](line):
+##                            data["channel"] = self._get_func["channel"](line)
+##                        if self._get_func["rate"](line):
+##                            data["rate"] = self._get_func["rate"](line)
+##                        if self._get_func["BW"](line):
+##                            data["BW"] = self._get_func["BW"](line)
+##                        if self._get_func["stream"](line):
+##                            data["stream"] = self._get_func["stream"](line)
+##                        if self._get_func["antenna"](line):
+##                            data["antenna"] = self._get_func["antenna"](line)
+##                        # TX power
+##                        if self._get_func["power"](line):
+##                            data["power"] = self._get_func["power"](line)
+##                        if self._get_func["Target_Power"](line):
+##                            data["Target_Power"] = self._get_func["Target_Power"](line)
+##
+##                        # RX SENS
+##                        if self._get_func["sens"](line):
+##                            data["sens"] = self._get_func["sens"](line)
 
                     else: # line with item and value
                         if len(line) > 1:
@@ -118,6 +125,15 @@ class Data:
         """
         if len(line) > 8:
             if line[7] == "Power":
+                return line[8]
+        return None
+
+    def _get_target_power(self,line):
+        """
+        "tx Target_Power" explicit title position is in list position "7" and value position is in list position "8"
+        """
+        if len(line) > 8:
+            if line[7] == "Target_Power":
                 return line[8]
         return None
 

@@ -22,7 +22,7 @@ class _Abstract_Workbook_Template:
     def save(self,path):
         pass
 
-    def post(self,data_path, mode, band, standard_anchor, channel_anchor):
+    def post(self,data_path, mode, band, standard_anchor):
         pass
 
     def _get_sheet_arrange(self,workbook):
@@ -130,11 +130,15 @@ class _Post_Func:
 
         # key: item name in sheet, value: item name in data
         self.sheet_item_ref = {"Tx Power":"power",
+                          "Target Power":"target_power",
+                          "Measured Power":"power",
                           "EVM":"EVM",
                           "Mask":"Mask",
                           "Freq error":"F_ER",
                           "SC error":"CR_ER",
                           "Flatness":"Flatness",
+                          "Phase Noise":"phase_noise",
+                          "LO Leakage":"lo_leakage",
                           "Rx Power":"SENS"
                          }
 
@@ -142,11 +146,14 @@ class _Post_Func:
 
         self.post_func= {# TX
                         "power":self._post_power,
+                        "target_power":self._post_target_power,
                         "EVM":self._post_evm,
                         "Mask":self._post_mask,
                         "F_ER":self._post_freq_err,
                         "CR_ER":self._post_cr_err,
                         "Flatness":self._post_flatness,
+                        "phase_noise":self._post_phase_noise,
+                        "lo_leakage":self._post_lo_leakage,
                         # RX
                         "SENS":self._post_sens
                         }
@@ -179,6 +186,16 @@ class _Post_Func:
             if data["power"]:
                 return data["power"].split(",")
             return data["power"]
+
+        if "Measured_Power" in data:
+            if data["Measured_Power"]:
+                return data["Measured_Power"].split(",")
+        return None
+
+    def _post_target_power(self,data):
+        if "Target_Power" in data:
+            if data["Target_Power"]:
+                return data["Target_Power"].split(",")
         return None
 
     def _post_evm(self,data):
@@ -198,15 +215,31 @@ class _Post_Func:
     def _post_freq_err(self,data):
         if "F_ER" in data:
             if data["F_ER"]:
-                return list([data["F_ER"]])
+##                return list([data["F_ER"]])
+                return data["F_ER"].split(",")
             return data["F_ER"]
         return None
 
     def _post_cr_err(self,data):
         if "CR_ER" in data:
             if data["CR_ER"]:
-                return list([data["CR_ER"]])
+##                return list([data["CR_ER"]])
+                return data["CR_ER"].split(",")
             return data["CR_ER"]
+        return None
+
+    def _post_phase_noise(self,data):
+        if "Phase_Noise" in data:
+            if data["Phase_Noise"]:
+                return data["Phase_Noise"].split(",")
+            return data["Phase_Noise"]
+        return None
+
+    def _post_lo_leakage(self,data):
+        if "Lo_Leakage" in data:
+            if data["Lo_Leakage"]:
+                return data["Lo_Leakage"].split(",")
+            return data["Lo_Leakage"]
         return None
 
     def _post_flatness(self,data):
@@ -341,7 +374,7 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
     def save(self,path):
         self._wb.save(path + ".xls")
 
-    def post(self,data_path, mode, band, standard_anchor, channel_anchor):
+    def post(self,data_path, mode, band, standard_anchor):
         """
         Get template setup to find post position then post value
         """
@@ -527,7 +560,7 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
                 return (row, col)
             col += 1
 
-        print "Can't find this channel in channel form " + str(ch) + " , "+ str(pos)
+        print "Can't find this channel " + str(ch) + " in channel form"  " , "+ str(pos)
         return None
 
     def _find_ch_sum(self, table, ch_pos):

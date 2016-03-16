@@ -39,14 +39,14 @@ def post(wb, data_path, data_name):
     """
     #initial setup
     standard_anchor = "Standard"
-    channel_anchor = "Ch"
+##    channel_anchor = "Ch"
     band = find_band(data_name)
     tx_or_rx = find_tx_rx(data_name)
     if not (band and tx_or_rx):
         print data_path + " is NOT a legal data file."
         return 1
 
-    wb.post(data_path, tx_or_rx, band, standard_anchor, channel_anchor)
+    wb.post(data_path, tx_or_rx, band, standard_anchor)
 
 def save_report(wb,report_path,date,name):
     """
@@ -108,12 +108,12 @@ def main():
     date = datetime.datetime.fromtimestamp(t).strftime(r"%Y%m%d")
 
     # Need get template path
-##    if len(sys.argv) == 1:
-##        sys.exit(0)
+    if len(sys.argv) == 1:
+        sys.exit(0)
 
-##    template_path = sys.argv[1]
-    template_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-    template_path = os.path.join(template_path,"tmp.xlsx")
+    template_path = sys.argv[1]
+##    template_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+##    template_path = os.path.join(template_path,"tmp.xlsx")
 
     wb = open_workbook(template_path)
     if not wb:
@@ -123,15 +123,18 @@ def main():
     t1 = time.time()
 
     for folder in folder_file_names:
-        for data_name in folder_file_names[folder]:
-            data_path = os.path.join(log_path,folder,data_name)
-            print data_path
-            post(wb, data_path,data_name)
+        try:
+            for data_name in folder_file_names[folder]:
+                data_path = os.path.join(log_path,folder,data_name)
+                print data_path
+                post(wb, data_path,data_name)
+        except:
+            print "Unexpected error:", sys.exc_info()
         save_report(wb,report_path,date,folder)
 
     print "Finish !"
     print time.time() - t1
-##    os.system("pause")
+    os.system("pause")
 
 if __name__ == '__main__':
     main()
