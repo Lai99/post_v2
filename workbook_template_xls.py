@@ -381,7 +381,12 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         table = self._rb.sheet_by_index(self._sheet_arrange[mode+band])
 
         if not (mode+band) in self._sheet_setup:
-            self._sheet_setup[mode+band] = self._get_fill_pos(table, mode,band,standard_anchor)
+            sheet_pos = self._get_fill_pos(table, mode,band,standard_anchor)
+            if sheet_pos:
+                self._sheet_setup[mode+band] = sheet_pos
+            else:
+                return
+
         fill_pos, all_anchor_row = self._sheet_setup[mode+band][0], self._sheet_setup[mode+band][1]
 
         last_data_conf = None
@@ -461,6 +466,9 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
             # standard_x = 1,module_x = 2,rate_x = 3, case_x = 6, start_x = 7
             return 0,1,2,5,6
 
+
+
+
     def _get_fill_pos(self, table, mode, band, anchor):
         """
         Get all value can be filled position in a sheet
@@ -473,14 +481,14 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         all_anchor_row = []
         #Don't need sheet front content. Use anchor to go to standard start position
         for row in range(1,50):
-            if table.cell_value(row,standard_x) == anchor:
+            if table.cell_value(row,standard_x).lower() == anchor:
                 start = row
                 all_anchor_row.append(row)
                 break
 
         if len(all_anchor_row) == 0:
-            "Find no sheet anchor"
-            return 1
+            print "Find no sheet anchor"
+            return None
 
         last_standard = (0,0)
         last_module = (0,0)
@@ -494,7 +502,7 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
             if table.cell_value(row,module_x) != None and table.cell_value(row,module_x) != "":    #Collect Modulations in a standard
                 if case_count > 0:
                     # For eliminate the warning point out thing
-                    if table.cell_value(row,standard_x) == anchor:
+                    if table.cell_value(row,standard_x).lower() == anchor:
                         case_count -= 1
                     #Add "module and rate" with "value start position and case numbers"
                     k = self._make_module_item_key(table, last_module, rate_x)
@@ -503,7 +511,7 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
                 last_module = (row,module_x)
 
             if table.cell_value(row,standard_x) != None and table.cell_value(row,standard_x) != "":
-                if  table.cell_value(row,standard_x) != anchor:
+                if  table.cell_value(row,standard_x).lower() != anchor:
                     if module_items:   #if true means it has a modulation collection
     ##************************************************************************************************
     ##  5G sheet has a sheet tail. When reach this, stop search and record "standard"

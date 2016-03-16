@@ -38,7 +38,7 @@ def post(wb, data_path, data_name):
     Get data path and pass to post function to post value
     """
     #initial setup
-    standard_anchor = "Standard"
+    standard_anchor = "standard"
 ##    channel_anchor = "Ch"
     band = find_band(data_name)
     tx_or_rx = find_tx_rx(data_name)
@@ -113,7 +113,7 @@ def main():
 
     template_path = sys.argv[1]
 ##    template_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-##    template_path = os.path.join(template_path,"tmp.xlsx")
+##    template_path = os.path.join(template_path,"NS.xls")
 
     wb = open_workbook(template_path)
     if not wb:

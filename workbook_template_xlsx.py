@@ -365,8 +365,11 @@ class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _P
         self._max_row = ws.max_row
 
         if not (mode+band) in self._sheet_setup:
-            self._sheet_setup[mode+band] = self._get_fill_pos(ws, mode,band,standard_anchor)
-
+            sheet_pos = self._get_fill_pos(ws, mode,band,standard_anchor)
+            if sheet_pos:
+                self._sheet_setup[mode+band] = sheet_pos
+            else:
+                return
 ##        for i in self._sheet_setup[mode+band][0]:
 ##            for j in self._sheet_setup[mode+band][0][i]:
 ##                print i,j,self._sheet_setup[mode+band][0][i][j]
@@ -461,14 +464,14 @@ class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _P
         all_anchor_row = []
         #Don't need sheet front content. Use anchor to go to standard start position
         for row in range(1,50):
-            if sheet.cell(row=row,column=standard_x).value == anchor:
+            if str(sheet.cell(row=row,column=standard_x).value).lower() == anchor:
                 start = row
                 all_anchor_row.append(row)
                 break
 
         if len(all_anchor_row) == 0:
-            "Find no sheet anchor"
-            return 1
+            print "Find no sheet anchor"
+            return None
 ##        print all_anchor_row
 
         last_standard = (0,0)
@@ -483,7 +486,7 @@ class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _P
             if sheet.cell(row=row,column=module_x).value != None and sheet.cell(row=row,column=module_x).value != "":    #Collect Modulations in a standard
                 if case_count > 0:
                     # For eliminate the warning point out thing
-                    if sheet.cell(row=row,column=standard_x).value == anchor:
+                    if str(sheet.cell(row=row,column=standard_x).value).lower() == anchor:
                         case_count -= 1
                     #Add "module and rate" with "value start position and case numbers"
                     k = self._make_module_item_key(sheet, last_module, rate_x)
@@ -492,7 +495,7 @@ class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _P
                 last_module = (row,module_x)
 
             if sheet.cell(row=row,column=standard_x).value != None and sheet.cell(row=row,column=standard_x).value != "":
-                if  sheet.cell(row=row,column=standard_x).value != anchor:
+                if  str(sheet.cell(row=row,column=standard_x).value).lower() != anchor:
                     if module_items:   #if true means it has a modulation collection
     ##************************************************************************************************
     ##  5G sheet has a sheet tail. When reach this, stop search and record "standard"
