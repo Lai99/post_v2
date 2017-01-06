@@ -139,6 +139,7 @@ class _Post_Func:
                           "Mask":"Mask",
                           "Freq error":"F_ER",
                           "SC error":"CR_ER",
+                          "Symbol Clock": "CR_ER",
                           "Flatness":"Flatness",
                           "Phase Noise":"phase_noise",
                           "LO Leakage":"lo_leakage",
@@ -188,7 +189,8 @@ class _Post_Func:
     def _post_mask(self,data):
         if "Mask" in data:
             if data["Mask"]:
-                return data["Mask"].split(",")
+                # return data["Mask"].split(",")
+                return data["Mask"].split(":")
             return data["Mask"]
         return None
 
@@ -206,6 +208,13 @@ class _Post_Func:
 ##                return list([data["CR_ER"]])
                 return data["CR_ER"].split(",")
             return data["CR_ER"]
+
+        if "Symbol_ER" in data:
+            if data["Symbol_ER"]:
+                ##return list([data["Symbol_ER"]])
+                return data["Symbol_ER"].split(",")
+            return data["Symbol_ER"]
+
         return None
 
     def _post_phase_noise(self,data):
@@ -562,7 +571,7 @@ class Workbook_Template_Xlsx(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _P
         count = 0
         match = sheet.cell(row=ch_pos[0], column=ch_pos[1]).value.replace(" ","")
 
-        while ch_pos[1]+count <= self._max_col and sheet.cell(row=ch_pos[0],column=ch_pos[1]+count).value.replace(" ","") == match:
+        while ch_pos[1]+count < self._max_col and sheet.cell(row=ch_pos[0],column=ch_pos[1]+count).value != None and sheet.cell(row=ch_pos[0],column=ch_pos[1]+count).value.replace(" ","") == match:
 ##            print ch_pos[0] , ch_pos[1] + count
             count += 1
         return count - 1

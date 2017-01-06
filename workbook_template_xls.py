@@ -136,6 +136,7 @@ class _Post_Func:
                           "Mask":"Mask",
                           "Freq error":"F_ER",
                           "SC error":"CR_ER",
+                          "Symbol Clock": "CR_ER",
                           "Flatness":"Flatness",
                           "Phase Noise":"phase_noise",
                           "LO Leakage":"lo_leakage",
@@ -208,7 +209,10 @@ class _Post_Func:
     def _post_mask(self,data):
         if "Mask" in data:
             if data["Mask"]:
-                return data["Mask"].split(",")
+                #Only obe value
+#                return data["Mask"].split(",")
+                #Multi-value
+                return data["Mask"].split(":")
             return data["Mask"]
         return None
 
@@ -223,9 +227,16 @@ class _Post_Func:
     def _post_cr_err(self,data):
         if "CR_ER" in data:
             if data["CR_ER"]:
-##                return list([data["CR_ER"]])
+                ##return list([data["CR_ER"]])
                 return data["CR_ER"].split(",")
             return data["CR_ER"]
+
+        if "Symbol_ER" in data:
+            if data["Symbol_ER"]:
+                ##return list([data["Symbol_ER"]])
+                return data["Symbol_ER"].split(",")
+            return data["Symbol_ER"]
+
         return None
 
     def _post_phase_noise(self,data):
@@ -465,9 +476,6 @@ class Workbook_Template_Xls(_Abstract_Workbook_Template, _Get_Sheet_Arrange, _Po
         else:
             # standard_x = 1,module_x = 2,rate_x = 3, case_x = 6, start_x = 7
             return 0,1,2,5,6
-
-
-
 
     def _get_fill_pos(self, table, mode, band, anchor):
         """
